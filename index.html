@@ -6,6 +6,75 @@
     <title>Platinum Calculator</title>
     <link rel="stylesheet" href="https://pyscript.net/latest/pyscript.css" />
     <script defer src="https://pyscript.net/latest/pyscript.js"></script>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            line-height: 1.6;
+            color: #e0e0e0;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #121212;
+        }
+        h1 {
+            color: #bb86fc;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        #inputForm {
+            background-color: #1e1e1e;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
+        label {
+            display: inline-block;
+            width: 200px;
+            margin-bottom: 10px;
+            color: #bb86fc;
+        }
+        input[type="number"], input[type="checkbox"] {
+            width: calc(100% - 210px);
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #333;
+            border-radius: 4px;
+            background-color: #2c2c2c;
+            color: #e0e0e0;
+        }
+        input[type="checkbox"] {
+            width: auto;
+        }
+        button {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            background-color: #03dac6;
+            color: #000;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 20px;
+        }
+        button:hover {
+            background-color: #018786;
+        }
+        #output, #error {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+        }
+        #output {
+            background-color: #1b3a4b;
+            border: 1px solid #03dac6;
+        }
+        #error {
+            background-color: #4b1b1b;
+            border: 1px solid #cf6679;
+            color: #cf6679;
+        }
+    </style>
 </head>
 <body>
     <h1>Platinum Calculator</h1>
@@ -33,56 +102,64 @@
     </form>
 
     <div id="output"></div>
+    <div id="error"></div>
 
     <py-script>
-from pyscript import Element
-
-def platinum_cost(n, vip_active):
-    if n == 1:
-        base_cost = 10000
-    elif 1 < n <= 21:
-        base_cost = 10000 + 1000 * (n - 1)
-    else:
-        base_cost = 30000 + 500 * (n - 21)
-    
-    return base_cost * 0.9 if vip_active else base_cost
-
-def plat_req_to_make(desired_plat, bonus_pct):
-    return int(desired_plat / (1 + bonus_pct / 100))
-
-def calculate(event):
-    vip_active = Element('vip_active').element.checked
-    exchange_pct = float(Element('exchange_pct').value)
-    bonus_pct = float(Element('bonus_pct').value)
-    cb_mkt_prc = float(Element('cb_mkt_prc').value)
-    plat_mkt_prc = float(Element('plat_mkt_prc').value)
-    desired_plat = float(Element('desired_plat').value)
-
-    uv_pts = 1.95
-    da_pts = 3.25
-    cb_pts = 5.40
-
-    max_plat_to_make = int(plat_req_to_make(desired_plat, bonus_pct))
-
-    total_gold_cost = 99999999999999
-    plat_to_make = 0
-
-    for i in range(100, max_plat_to_make+1, 5):
-        gold_cost = 250000*i
-        plat_pt_cost = sum(platinum_cost(i, vip_active) for p in range(i))
-        cb_req = plat_pt_cost / (1 + (exchange_pct / 100)) / cb_pts
-        cb_cost = cb_req * cb_mkt_prc
-        gold_cost+=cb_cost
-        remaining_plat_to_buy = desired_plat - (i*(1 + bonus_pct / 100))
-        gold_cost+=(remaining_plat_to_buy*plat_mkt_prc)
-        if gold_cost < total_gold_cost:
-            total_gold_cost = gold_cost
-            plat_to_make = i
-
-    result = f"Platinum to make: {plat_to_make}, Total gold cost (in billions): {total_gold_cost//1000000000}"
-    Element('output').write(result)
-
-Element('calculate').element.onclick = calculate
+        import js
+        from pyodide.ffi import create_proxy
+        
+        def platinum_cost(n, vip_active):
+            if n == 1:
+                base_cost = 10000
+            elif 1 < n <= 21:
+                base_cost = 10000 + 1000 * (n - 1)
+            else:
+                base_cost = 30000 + 500 * (n - 21)
+            
+            return base_cost * 0.9 if vip_active else base_cost
+        
+        def rbot_to_make(desired_plat, bonus_pct):
+            return int(desired_plat / (1 + bonus_pct / 100))
+        
+        def calculate(event):
+            try:
+                vip_active = js.document.getElementById('vip_active').checked
+                exchange_pct = float(js.document.getElementById('exchange_pct').value)
+                bonus_pct = float(js.document.getElementById('bonus_pct').value)
+                cb_mkt_prc = float(js.document.getElementById('cb_mkt_prc').value)
+                plat_mkt_prc = float(js.document.getElementById('plat_mkt_prc').value)
+                desired_plat = float(js.document.getElementById('desired_plat').value)
+        
+                uv_pts = 1.95
+                da_pts = 3.25
+                cb_pts = 5.40
+        
+                max_plat_to_make = int(rbot_to_make(desired_plat, bonus_pct))
+        
+                total_gold_cost = 99999999999999
+                plat_to_make = 0
+        
+                for i in range(100, max_plat_to_make+1, 5):
+                    gold_cost = 250000*i
+                    plat_pt_cost = sum(platinum_cost(i, vip_active) for p in range(i))
+                    cb_req = plat_pt_cost / (1 + (exchange_pct / 100)) / cb_pts
+                    cb_cost = cb_req * cb_mkt_prc
+                    gold_cost+=cb_cost
+                    remaining_plat_to_buy = desired_plat - (i*(1 + bonus_pct / 100))
+                    gold_cost+=(remaining_plat_to_buy*plat_mkt_prc)
+                    if gold_cost < total_gold_cost:
+                        total_gold_cost = gold_cost
+                        plat_to_make = i
+        
+                result = f"Platinum to make: {plat_to_make}, Total gold cost (in billions): {total_gold_cost//1000000000}"
+                js.document.getElementById('output').innerHTML = result
+                js.document.getElementById('error').innerHTML = ""
+            except Exception as e:
+                js.document.getElementById('error').innerHTML = f"Error: {str(e)}"
+                print(f"Error: {str(e)}")
+        
+        js.document.getElementById('calculate').addEventListener("click", create_proxy(calculate))
+            
     </py-script>
 </body>
 </html>
