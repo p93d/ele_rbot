@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Platinum Calculator</title>
+    <link rel="stylesheet" href="https://pyscript.net/latest/pyscript.css" />
+    <script defer src="https://pyscript.net/latest/pyscript.js"></script>
+</head>
+<body>
+    <h1>Platinum Calculator</h1>
+    
+    <form id="inputForm">
+        <label for="vip_active">VIP Active:</label>
+        <input type="checkbox" id="vip_active" checked><br>
+
+        <label for="exchange_pct">Exchange Percentage:</label>
+        <input type="number" id="exchange_pct" value="800"><br>
+
+        <label for="bonus_pct">Bonus Percentage:</label>
+        <input type="number" id="bonus_pct" value="888"><br>
+
+        <label for="cb_mkt_prc">CB Market Price:</label>
+        <input type="number" id="cb_mkt_prc" value="2497"><br>
+
+        <label for="plat_mkt_prc">Platinum Market Price:</label>
+        <input type="number" id="plat_mkt_prc" value="1700000"><br>
+
+        <label for="desired_plat">Desired Platinum:</label>
+        <input type="number" id="desired_plat" value="18000"><br>
+
+        <button type="button" id="calculate">Calculate</button>
+    </form>
+
+    <div id="output"></div>
+
+    <py-script>
+from pyscript import Element
+
+def platinum_cost(n, vip_active):
+    if n == 1:
+        base_cost = 10000
+    elif 1 < n <= 21:
+        base_cost = 10000 + 1000 * (n - 1)
+    else:
+        base_cost = 30000 + 500 * (n - 21)
+    
+    return base_cost * 0.9 if vip_active else base_cost
+
+def plat_req_to_make(desired_plat, bonus_pct):
+    return int(desired_plat / (1 + bonus_pct / 100))
+
+def calculate(event):
+    vip_active = Element('vip_active').element.checked
+    exchange_pct = float(Element('exchange_pct').value)
+    bonus_pct = float(Element('bonus_pct').value)
+    cb_mkt_prc = float(Element('cb_mkt_prc').value)
+    plat_mkt_prc = float(Element('plat_mkt_prc').value)
+    desired_plat = float(Element('desired_plat').value)
+
+    uv_pts = 1.95
+    da_pts = 3.25
+    cb_pts = 5.40
+
+    max_plat_to_make = int(plat_req_to_make(desired_plat, bonus_pct))
+
+    total_gold_cost = 99999999999999
+    plat_to_make = 0
+
+    for i in range(100, max_plat_to_make+1, 5):
+        gold_cost = 250000*i
+        plat_pt_cost = sum(platinum_cost(i, vip_active) for p in range(i))
+        cb_req = plat_pt_cost / (1 + (exchange_pct / 100)) / cb_pts
+        cb_cost = cb_req * cb_mkt_prc
+        gold_cost+=cb_cost
+        remaining_plat_to_buy = desired_plat - (i*(1 + bonus_pct / 100))
+        gold_cost+=(remaining_plat_to_buy*plat_mkt_prc)
+        if gold_cost < total_gold_cost:
+            total_gold_cost = gold_cost
+            plat_to_make = i
+
+    result = f"Platinum to make: {plat_to_make}, Total gold cost (in billions): {total_gold_cost//1000000000}"
+    Element('output').write(result)
+
+Element('calculate').element.onclick = calculate
+    </py-script>
+</body>
+</html>
