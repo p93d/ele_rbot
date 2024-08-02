@@ -46,10 +46,10 @@
         }
         input[type="number"], input[type="checkbox"] {
             width: 90%;
-            padding: 10px;
+            padding: 2px;
             margin-bottom: 15px;
-            margin-left: 3px;
-            margin-right: 3px;
+            margin-left: 5px;
+            margin-right: 5px;
             border: none;
             border-radius: 5px;
             background-color: var(--input-bg);
@@ -102,7 +102,7 @@
     </style>
 </head>
 <body>
-    <h1>Robot Calculator</h1>
+    <h1>Recyclobot Calculator</h1>
     
     <form id="inputForm">
 
@@ -113,7 +113,7 @@
             </div>
             <div>
                 <label for="bonus_pct">Bonus Chance (%):</label>
-                <input type="number" id="bonus_pct" value="900">
+                <input type="number" id="bonus_pct" value="1050">
             </div>
             <div>
                 <label for="vip_active">VIP Active</label>
@@ -128,20 +128,20 @@
         <div class="inline-inputs">
             <div>
                 <label for="uv_mkt_prc">UV Price:</label>
-                <input type="number" id="uv_mkt_prc" value="2800">
+                <input type="number" id="uv_mkt_prc" value="2300">
             </div>
             <div>
                 <label for="da_mkt_prc">DoA Price:</label>
-                <input type="number" id="da_mkt_prc" value="1900">
+                <input type="number" id="da_mkt_prc" value="3200">
             </div>
             <div>
                 <label for="cb_mkt_prc">CB Price:</label>
-                <input type="number" id="cb_mkt_prc" value="2497">
+                <input type="number" id="cb_mkt_prc" value="4000">
             </div>
         </div>
 
         <label for="plat_mkt_prc">Platinum Market Price:</label>
-        <input type="number" id="plat_mkt_prc" value="2500000">
+        <input type="number" id="plat_mkt_prc" value="3700000">
 
         <button type="button" id="calculate">Calculate</button>
     </form>
@@ -206,7 +206,7 @@ def calculate(event):
         
         target = 0
     
-        for i in range(0, 5000, 50):
+        for i in range(0, 10000, 50):
     
             cost_per_plat = calculate_marginal_cost(i)
     
@@ -221,12 +221,21 @@ def calculate(event):
     
             if cost_per_plat > plat_mkt_prc:
                 break
+
+        if cheapest_resource[0] == "Curved Blade":
+            pts_per_mat = cb_pts
+        elif cheapest_resource[0] == "Unsorted Valuables":
+            pts_per_mat = uv_pts
+        else:
+            pts_per_mat = da_pts
     
     
     
         result += f"Cheapest resource: {cheapest_resource[0]}<br></br>"
         result += f"Optimal number of platinum to make: {i:,.0f} (Total: {i*(1 + bonus_pct / 100):,.0f})<br></br>"
-        result += f"Marginal cost of next platinum: {cost_per_plat:,.0f}<br></br>"
+        result += f"Plat points needed: {sum([platinum_cost(x, vip_active) for x in range(i)]):,.0f}<br></br>"
+        result += f"{cheapest_resource[0]} needed: {sum([platinum_cost(x, vip_active) for x in range(i)]) / (pts_per_mat * (1 + (exchange_pct / 100))):,.0f}<br></br>"
+        
         
         js.document.getElementById('output').innerHTML = result
         js.document.getElementById('error').innerHTML = ""
