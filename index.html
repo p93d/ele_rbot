@@ -150,100 +150,86 @@
     <div id="error"></div>
 
     <py-script>
-import js
-from pyodide.ffi import create_proxy
-
-
-def platinum_cost(n, vip_active):
-    if n == 1:
-        base_cost = 10000
-    elif 1 < n <= 21:
-        base_cost = 10000 + 1000 * (n - 1)
-    else:
-        base_cost = 30000 + 500 * (n - 21)
+    import js
+    from pyodide.ffi import create_proxy
     
-    return base_cost * 0.9 if vip_active else base_cost
-
-def calculate(event):
-
-    result = ""
-
-    try:
-
-        vip_active = js.document.getElementById('vip_active').checked
-        exchange_pct = float(js.document.getElementById('exchange_pct').value)
-        bonus_pct = float(js.document.getElementById('bonus_pct').value)
-        uv_mkt_prc = float(js.document.getElementById('uv_mkt_prc').value)
-        da_mkt_prc = float(js.document.getElementById('da_mkt_prc').value)
-        cb_mkt_prc = float(js.document.getElementById('cb_mkt_prc').value)
-        plat_mkt_prc = float(js.document.getElementById('plat_mkt_prc').value)
-
-        uv_pts = 1.95
-        da_pts = 3.25
-        cb_pts = 5.40
-
-        # Determine the cheapest resource
-        resources = [
-            ("Unsorted Valuables", uv_mkt_prc / uv_pts),
-            ("Drops of Aether", da_mkt_prc / da_pts),
-            ("Curved Blade", cb_mkt_prc / cb_pts)
-        ]
-        cheapest_resource = min(resources, key=lambda x: x[1])
-    
-        gold_per_pt = cheapest_resource[1] / (1 + (exchange_pct / 100))
-    
-    
-        def calculate_marginal_cost(num_plat):
-    
-            plat_pts_required = platinum_cost(i, vip_active)
-    
-            cost = 250000 + plat_pts_required * gold_per_pt
-    
-            cost_per_plat = cost / (1 + bonus_pct / 100)
-    
-            return cost_per_plat
-    
-        
-        target = 0
-    
-        for i in range(0, 10000, 50):
-    
-            cost_per_plat = calculate_marginal_cost(i)
-    
-            if cost_per_plat > plat_mkt_prc:
-                target = i
-                break
-    
-    
-        for i in range(max(0, target-49), target+49):
-    
-            cost_per_plat = calculate_marginal_cost(i)
-    
-            if cost_per_plat > plat_mkt_prc:
-                break
-
-        if cheapest_resource[0] == "Curved Blade":
-            pts_per_mat = cb_pts
-        elif cheapest_resource[0] == "Unsorted Valuables":
-            pts_per_mat = uv_pts
+    def platinum_cost(n, vip_active):
+        if n == 1:
+            base_cost = 10000
+        elif 1 < n <= 21:
+            base_cost = 10000 + 1000 * (n - 1)
         else:
-            pts_per_mat = da_pts
-    
-    
-    
-        result += f"Cheapest resource: {cheapest_resource[0]}<br></br>"
-        result += f"Optimal number of platinum to make: {i:,.0f} (Total: {i*(1 + bonus_pct / 100):,.0f})<br></br>"
-        result += f"Plat points needed: {sum([platinum_cost(x, vip_active) for x in range(i)]):,.0f}<br></br>"
-        result += f"{cheapest_resource[0]} needed: {sum([platinum_cost(x, vip_active) for x in range(i)]) / (pts_per_mat * (1 + (exchange_pct / 100))):,.0f}<br></br>"
+            base_cost = 30000 + 500 * (n - 21)
         
-        
-        js.document.getElementById('output').innerHTML = result
-        js.document.getElementById('error').innerHTML = ""
-    except Exception as e:
-        js.document.getElementById('error').innerHTML = f"Error: {str(e)}"
-        print(f"Error: {str(e)}")
+        return base_cost * 0.9 if vip_active else base_cost
+    
+    def calculate_marginal_cost(num_plat, gold_per_pt, bonus_pct, vip_active):
+        plat_pts_required = platinum_cost(num_plat, vip_active)
+        cost = 250000 + plat_pts_required * gold_per_pt
+        cost_per_plat = cost / (1 + bonus_pct / 100)
+        return cost_per_plat
+    
+    def calculate(event):
+        result = ""
+    
+        try:
+            vip_active = js.document.getElementById('vip_active').checked
+            exchange_pct = float(js.document.getElementById('exchange_pct').value)
+            bonus_pct = float(js.document.getElementById('bonus_pct').value)
+            uv_mkt_prc = float(js.document.getElementById('uv_mkt_prc').value)
+            da_mkt_prc = float(js.document.getElementById('da_mkt_prc').value)
+            cb_mkt_prc = float(js.document.getElementById('cb_mkt_prc').value)
+            plat_mkt_prc = float(js.document.getElementById('plat_mkt_prc').value)
+    
+            uv_pts, da_pts, cb_pts = 1.95, 3.25, 5.40
+    
+            # Determine the cheapest resource
+            resources = [
+                ("Unsorted Valuables", uv_mkt_prc / uv_pts),
+                ("Drops of Aether", da_mkt_prc / da_pts),
+                ("Curved Blade", cb_mkt_prc / cb_pts)
+            ]
+            cheapest_resource = min(resources, key=lambda x: x[1])
+    
+            gold_per_pt = cheapest_resource[1] / (1 + (exchange_pct / 100))
+    
+            target = None
+            for i in range(0, 10000, 50):
+                cost_per_plat = calculate_marginal_cost(i, gold_per_pt, bonus_pct, vip_active)
+                if cost_per_plat > plat_mkt_prc:
+                    target = i
+                    break
+            
+            if target is None:
+                target = 10000
+    
+            for i in range(max(0, target - 49), target + 49):
+                cost_per_plat = calculate_marginal_cost(i, gold_per_pt, bonus_pct, vip_active)
+                if cost_per_plat > plat_mkt_prc:
+                    break
+    
+            pts_per_mat = {
+                "Curved Blade": cb_pts,
+                "Unsorted Valuables": uv_pts,
+                "Drops of Aether": da_pts
+            }[cheapest_resource[0]]
+    
+            total_plat_points = sum(platinum_cost(x, vip_active) for x in range(i))
+            required_materials = total_plat_points / (pts_per_mat * (1 + (exchange_pct / 100)))
+    
+            result += f"Cheapest resource: {cheapest_resource[0]}<br>"
+            result += f"Optimal number of platinum to make: {i:,.0f} (Total: {i * (1 + bonus_pct / 100):,.0f})<br>"
+            result += f"Plat points needed: {total_plat_points:,.0f}<br>"
+            result += f"{cheapest_resource[0]} needed: {required_materials:,.0f}<br>"
+    
+            js.document.getElementById('output').innerHTML = result
+            js.document.getElementById('error').innerHTML = ""
+        except Exception as e:
+            js.document.getElementById('error').innerHTML = f"Error: {str(e)}"
+            print(f"Error: {str(e)}")
+    
+    js.document.getElementById('calculate').addEventListener("click", create_proxy(calculate))
 
-js.document.getElementById('calculate').addEventListener("click", create_proxy(calculate))
     </py-script>
 </body>
 </html>
